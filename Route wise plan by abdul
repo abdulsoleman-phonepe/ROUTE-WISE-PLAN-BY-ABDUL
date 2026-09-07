@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RouteWise - Field Agent Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+    .header { background: #5f259f; color: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .card { background: white; padding: 20px; border-radius: 8px; margin-top: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+    button { background: #5f259f; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #4a1d7c; }
+    .row { display: flex; gap: 10px; }
+    .optional { font-size: 0.8em; color: gray; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h2>RouteWise - Field Agent Tool</h2>
+  <button onclick="clearAll()" style="width: auto; background: #d9534f;">Clear All</button>
+</div>
+
+<div class="card">
+  <label><strong>AGENT NAME</strong></label>
+  <input type="text" id="agentName" placeholder="e.g. Rahul Kumar">
+  <button onclick="saveAgent()">Save</button>
+</div>
+
+<div class="card">
+  <label><strong>STARTING POINT</strong></label>
+  <input type="text" id="startLoc" placeholder="Paste lat, long — e.g. 21.2514, 81.6296">
+  <button onclick="getCurrentLocation('startLoc')">Use My Location</button>
+  
+  <br><br>
+  <label>Day Starts At <span class="optional">(Optional)</span></label>
+  <input type="time" id="startTime" value="09:00">
+</div>
+
+<div class="card">
+  <label><strong>END POINT</strong> <span class="optional">(Optional)</span></label>
+  <input type="text" id="endLoc" placeholder="Paste lat, long">
+  
+  <label>Day Ends At <span class="optional">(Optional)</span></label>
+  <input type="time" id="endTime" value="18:00">
+</div>
+
+<div class="card">
+  <label><strong>MERCHANT STOPS</strong></label>
+  <div id="stopsContainer"></div>
+  <button onclick="addStopField()">+ Add Merchant Stop</button>
+</div>
+
+<button style="margin-top:20px; padding: 15px;" onclick="optimizeAndSubmit()">✨ Optimize Route & Save Data</button>
+
+<script>
+  const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL";
+
+  // Save Agent Name in local storage
+  window.onload = () => {
+    if(localStorage.getItem("agentName")) {
+      document.getElementById("agentName").value = localStorage.getItem("agentName");
+    }
+  };
+
+  function saveAgent() {
+    localStorage.setItem("agentName", document.getElementById("agentName").value);
+    alert("Agent name saved!");
+  }
+
+  function getCurrentLocation(fieldId) {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById(fieldId).value = `${pos.coords.latitude}, ${pos.coords.longitude}`;
+      });
+    }
+  }
+
+  function addStopField() {
+    const container = document.getElementById("stopsContainer");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "stop-input";
+    input.placeholder = "Enter Stop Lat, Long or Store Name";
+    container.appendChild(input);
+  }
+
+  function clearAll() {
+    document.getElementById("startLoc").value = "";
+    document.getElementById("endLoc").value = "";
+    document.getElementById("stopsContainer").innerHTML = "";
+  }
+
+  async function optimizeAndSubmit() {
+    const stops = Array.from(document.querySelectorAll(".stop-input")).map(i => i.value).filter(Boolean);
+    
+    const payload = {
+      agentName: document.getElementById("agentName").value,
+      startLocation: document.getElementById("startLoc").value,
+      endLocation: document.getElementById("endLoc").value,
+      startTime: document.getElementById("startTime").value,
+      endTime: document.getElementById("endTime").value,
+      stops: stops,
+      optimizedOrder: stops // Simplified order output
+    };
+
+    // Push data to Google Sheet
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    alert("Route saved successfully to Google Sheet!");
+  }
+</script>
+
+</body>
+</html>
